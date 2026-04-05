@@ -44,6 +44,22 @@
   .warn { background: #1c1305; border: 1px solid #854d0e; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #fbbf24; margin-bottom: 1.25rem; }
   footer { text-align: center; margin-top: 2.5rem; font-size: 0.8rem; color: #555; }
   footer a { color: #60a5fa; text-decoration: none; }
+
+  /* Toggle switch */
+  .toggle-header { display: flex; align-items: center; justify-content: space-between; }
+  .toggle-header h2 { margin-bottom: 0; }
+  .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider { position: absolute; inset: 0; background: #333; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+  .toggle .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #888; border-radius: 50%; transition: all 0.2s; }
+  .toggle input:checked + .slider { background: #2563eb; }
+  .toggle input:checked + .slider::before { transform: translateX(20px); background: #fff; }
+  .card-body { transition: opacity 0.2s, max-height 0.3s; overflow: hidden; }
+  .card-body.collapsed { opacity: 0.35; max-height: 0; padding: 0; margin: 0; pointer-events: none; }
+  .card-body.expanded { opacity: 1; max-height: 600px; }
+  .toggle-hint { font-size: 0.75rem; color: #555; margin-top: 0.5rem; }
+  .toggle-hint.visible { display: block; }
+  .toggle-hint.hidden { display: none; }
 </style>
 </head>
 <body>
@@ -70,49 +86,67 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>Email / SMTP <span class="badge optional">optional</span></h2>
-    <p class="hint" style="margin-bottom: 1rem;">Required for email verification, password resets, and invites. Skip for testing with auto-confirm.</p>
-    <div class="row">
-      <div class="field">
-        <label for="smtpHost">SMTP Host</label>
-        <input type="text" id="smtpHost" placeholder="smtp.gmail.com" />
-      </div>
-      <div class="field">
-        <label for="smtpPort">SMTP Port</label>
-        <input type="number" id="smtpPort" placeholder="587" value="587" />
-      </div>
+  <div class="card" id="smtpCard">
+    <div class="toggle-header">
+      <h2>Email / SMTP <span class="badge optional">optional</span></h2>
+      <label class="toggle">
+        <input type="checkbox" id="smtpToggle" />
+        <span class="slider"></span>
+      </label>
     </div>
-    <div class="row">
-      <div class="field">
-        <label for="smtpUser">SMTP User</label>
-        <input type="text" id="smtpUser" placeholder="you@gmail.com" />
+    <p class="toggle-hint visible" id="smtpOff">Email disabled — users will be auto-confirmed without email verification.</p>
+    <div class="card-body collapsed" id="smtpBody">
+      <p class="hint" style="margin-bottom: 1rem;">Required for email verification, password resets, and invites.</p>
+      <div class="row">
+        <div class="field">
+          <label for="smtpHost">SMTP Host</label>
+          <input type="text" id="smtpHost" placeholder="smtp.gmail.com" />
+        </div>
+        <div class="field">
+          <label for="smtpPort">SMTP Port</label>
+          <input type="number" id="smtpPort" placeholder="587" value="587" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="smtpUser">SMTP User</label>
+          <input type="text" id="smtpUser" placeholder="you@gmail.com" />
+        </div>
+        <div class="field">
+          <label for="smtpPass">SMTP Password</label>
+          <input type="text" id="smtpPass" placeholder="app-password" />
+        </div>
       </div>
       <div class="field">
-        <label for="smtpPass">SMTP Password</label>
-        <input type="text" id="smtpPass" placeholder="app-password" />
+        <label for="smtpFrom">From email</label>
+        <input type="text" id="smtpFrom" placeholder="noreply@example.com" />
       </div>
-    </div>
-    <div class="field">
-      <label for="smtpFrom">From email</label>
-      <input type="text" id="smtpFrom" placeholder="noreply@example.com" />
     </div>
   </div>
 
-  <div class="card">
-    <h2>Stripe <span class="badge optional">optional</span></h2>
-    <div class="field">
-      <label for="stripeSecret">Secret Key</label>
-      <input type="text" id="stripeSecret" placeholder="sk_live_..." />
+  <div class="card" id="stripeCard">
+    <div class="toggle-header">
+      <h2>Stripe <span class="badge optional">optional</span></h2>
+      <label class="toggle">
+        <input type="checkbox" id="stripeToggle" />
+        <span class="slider"></span>
+      </label>
     </div>
-    <div class="row">
+    <p class="toggle-hint visible" id="stripeOff">Paid memberships disabled — all access is free.</p>
+    <div class="card-body collapsed" id="stripeBody">
       <div class="field">
-        <label for="stripeWebhook">Webhook Secret</label>
-        <input type="text" id="stripeWebhook" placeholder="whsec_..." />
+        <label for="stripeSecret">Secret Key</label>
+        <input type="text" id="stripeSecret" placeholder="sk_live_..." />
       </div>
-      <div class="field">
-        <label for="stripePrice">Price ID</label>
-        <input type="text" id="stripePrice" placeholder="price_..." />
+      <div class="row">
+        <div class="field">
+          <label for="stripeWebhook">Webhook Secret</label>
+          <input type="text" id="stripeWebhook" placeholder="whsec_..." />
+        </div>
+        <div class="field">
+          <label for="stripePrice">Price ID</label>
+          <input type="text" id="stripePrice" placeholder="price_..." />
+        </div>
       </div>
     </div>
   </div>
@@ -148,17 +182,36 @@
 </div>
 
 <script>
+// --- Toggle logic ---
+
+function setupToggle(toggleId, bodyId, hintId) {
+  const toggle = document.getElementById(toggleId);
+  const body = document.getElementById(bodyId);
+  const hint = document.getElementById(hintId);
+  toggle.addEventListener('change', () => {
+    if (toggle.checked) {
+      body.classList.remove('collapsed');
+      body.classList.add('expanded');
+      hint.classList.remove('visible');
+      hint.classList.add('hidden');
+    } else {
+      body.classList.remove('expanded');
+      body.classList.add('collapsed');
+      hint.classList.remove('hidden');
+      hint.classList.add('visible');
+    }
+  });
+}
+
+setupToggle('smtpToggle', 'smtpBody', 'smtpOff');
+setupToggle('stripeToggle', 'stripeBody', 'stripeOff');
+
 // --- Crypto utilities (all client-side) ---
 
 function randomBytes(n) {
   const buf = new Uint8Array(n);
   crypto.getRandomValues(buf);
   return buf;
-}
-
-function randomBase64(n) {
-  return btoa(String.fromCharCode(...randomBytes(n)))
-    .replace(/\+/g, '').replace(/\//g, '').replace(/=/g, '').slice(0, n);
 }
 
 function randomAlphanumeric(n) {
@@ -213,15 +266,8 @@ async function generate() {
   }
 
   const appName = document.getElementById('appName').value.trim() || 'Roost';
-  const smtpHost = document.getElementById('smtpHost').value.trim();
-  const smtpPort = document.getElementById('smtpPort').value.trim() || '587';
-  const smtpUser = document.getElementById('smtpUser').value.trim();
-  const smtpPass = document.getElementById('smtpPass').value.trim();
-  const smtpFrom = document.getElementById('smtpFrom').value.trim() || `noreply@${domain}`;
-  const stripeSecret = document.getElementById('stripeSecret').value.trim();
-  const stripeWebhook = document.getElementById('stripeWebhook').value.trim();
-  const stripePrice = document.getElementById('stripePrice').value.trim();
-  const stripeEnabled = stripeSecret ? 'true' : 'false';
+  const smtpEnabled = document.getElementById('smtpToggle').checked;
+  const stripeEnabled = document.getElementById('stripeToggle').checked;
 
   // Generate secrets
   const postgresPassword = randomAlphanumeric(32);
@@ -233,9 +279,7 @@ async function generate() {
   const anonKey = await generateJWT('anon', jwtSecret);
   const serviceRoleKey = await generateJWT('service_role', jwtSecret);
 
-  const autoConfirm = smtpHost ? 'false' : 'true';
-
-  const env = `# ============================================================
+  let env = `# ============================================================
 # Roost - Dokploy Environment
 # Generated at ${new Date().toISOString()}
 # ============================================================
@@ -256,25 +300,41 @@ ANON_KEY=${anonKey}
 SERVICE_ROLE_KEY=${serviceRoleKey}
 
 # Auth
-GOTRUE_AUTOCONFIRM=${autoConfirm}
+GOTRUE_AUTOCONFIRM=${smtpEnabled ? 'false' : 'true'}
 
 # MinIO Storage (included by default)
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=${minioPassword}
-MINIO_BUCKET=roost-uploads
+MINIO_BUCKET=roost-uploads`;
+
+  if (smtpEnabled) {
+    const smtpHost = document.getElementById('smtpHost').value.trim();
+    const smtpPort = document.getElementById('smtpPort').value.trim() || '587';
+    const smtpUser = document.getElementById('smtpUser').value.trim();
+    const smtpPass = document.getElementById('smtpPass').value.trim();
+    const smtpFrom = document.getElementById('smtpFrom').value.trim() || `noreply@${domain}`;
+    env += `
 
 # Email (SMTP)
 SMTP_HOST=${smtpHost}
 SMTP_PORT=${smtpPort}
 SMTP_USER=${smtpUser}
 SMTP_PASS=${smtpPass}
-SMTP_FROM_EMAIL=${smtpFrom}
+SMTP_FROM_EMAIL=${smtpFrom}`;
+  }
+
+  if (stripeEnabled) {
+    const stripeSecret = document.getElementById('stripeSecret').value.trim();
+    const stripeWebhook = document.getElementById('stripeWebhook').value.trim();
+    const stripePrice = document.getElementById('stripePrice').value.trim();
+    env += `
 
 # Stripe
-STRIPE_ENABLED=${stripeEnabled}
+STRIPE_ENABLED=true
 STRIPE_SECRET_KEY=${stripeSecret}
 STRIPE_WEBHOOK_SECRET=${stripeWebhook}
 STRIPE_PRICE_ID=${stripePrice}`;
+  }
 
   document.getElementById('outputPre').textContent = env;
   document.getElementById('outputWrap').classList.add('visible');
