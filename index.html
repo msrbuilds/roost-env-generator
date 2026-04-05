@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roost - Dokploy Env Generator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e5e5e5; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; color: #fff; }
+  .subtitle { color: #888; font-size: 0.95rem; margin-bottom: 2rem; }
+  .subtitle a { color: #60a5fa; text-decoration: none; }
+  .subtitle a:hover { text-decoration: underline; }
+  .card { background: #141414; border: 1px solid #262626; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; }
+  .card h2 { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+  .card h2 .badge { font-size: 0.7rem; font-weight: 500; background: #1e3a5f; color: #60a5fa; padding: 2px 8px; border-radius: 9999px; }
+  .card h2 .badge.optional { background: #262626; color: #888; }
+  label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 0.35rem; }
+  input[type="text"], input[type="number"] { width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 0.6rem 0.75rem; color: #fff; font-size: 0.9rem; outline: none; transition: border-color 0.15s; }
+  input:focus { border-color: #60a5fa; }
+  input::placeholder { color: #555; }
+  .field { margin-bottom: 1rem; }
+  .field:last-child { margin-bottom: 0; }
+  .hint { font-size: 0.75rem; color: #666; margin-top: 0.25rem; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  button { cursor: pointer; font-size: 0.9rem; font-weight: 500; border: none; border-radius: 8px; padding: 0.7rem 1.25rem; transition: all 0.15s; }
+  .btn-primary { background: #2563eb; color: #fff; width: 100%; font-size: 1rem; padding: 0.85rem; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-copy { background: #1a1a1a; color: #60a5fa; border: 1px solid #333; padding: 0.5rem 1rem; }
+  .btn-copy:hover { background: #222; }
+  .btn-copy.copied { background: #14532d; color: #4ade80; border-color: #166534; }
+  .output-wrap { display: none; margin-top: 1.5rem; }
+  .output-wrap.visible { display: block; }
+  .output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .output-header h2 { margin: 0; font-size: 1rem; color: #fff; }
+  pre { background: #0a0a0a; border: 1px solid #262626; border-radius: 8px; padding: 1rem; overflow-x: auto; font-size: 0.8rem; line-height: 1.6; color: #d4d4d4; white-space: pre-wrap; word-break: break-all; }
+  .steps { margin-top: 1.5rem; }
+  .steps h2 { font-size: 1rem; color: #fff; margin-bottom: 0.75rem; }
+  .steps ol { padding-left: 1.25rem; }
+  .steps li { margin-bottom: 0.5rem; font-size: 0.9rem; color: #ccc; line-height: 1.5; }
+  .steps code { background: #1a1a1a; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; color: #60a5fa; }
+  .divider { border: none; border-top: 1px solid #222; margin: 1.5rem 0; }
+  .warn { background: #1c1305; border: 1px solid #854d0e; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #fbbf24; margin-bottom: 1.25rem; }
+  footer { text-align: center; margin-top: 2.5rem; font-size: 0.8rem; color: #555; }
+  footer a { color: #60a5fa; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Roost Env Generator</h1>
+  <p class="subtitle">Generate environment variables for <a href="https://github.com/msrbuilds/roost" target="_blank">Roost</a> Dokploy deployment. Everything runs in your browser — nothing is sent to any server.</p>
+
+  <div class="warn">All secrets are generated client-side using <code>crypto.getRandomValues()</code>. Still, treat the output as sensitive — don't share it publicly.</div>
+
+  <div class="card">
+    <h2>Domain <span class="badge">required</span></h2>
+    <div class="field">
+      <label for="domain">Your domain (pointed to VPS IP)</label>
+      <input type="text" id="domain" placeholder="community.example.com" />
+      <p class="hint">Must be a real domain — not localhost. DNS A record must point to your VPS.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Branding <span class="badge optional">optional</span></h2>
+    <div class="field">
+      <label for="appName">Community name</label>
+      <input type="text" id="appName" placeholder="Roost" value="Roost" />
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Email / SMTP <span class="badge optional">optional</span></h2>
+    <p class="hint" style="margin-bottom: 1rem;">Required for email verification, password resets, and invites. Skip for testing with auto-confirm.</p>
+    <div class="row">
+      <div class="field">
+        <label for="smtpHost">SMTP Host</label>
+        <input type="text" id="smtpHost" placeholder="smtp.gmail.com" />
+      </div>
+      <div class="field">
+        <label for="smtpPort">SMTP Port</label>
+        <input type="number" id="smtpPort" placeholder="587" value="587" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="smtpUser">SMTP User</label>
+        <input type="text" id="smtpUser" placeholder="you@gmail.com" />
+      </div>
+      <div class="field">
+        <label for="smtpPass">SMTP Password</label>
+        <input type="text" id="smtpPass" placeholder="app-password" />
+      </div>
+    </div>
+    <div class="field">
+      <label for="smtpFrom">From email</label>
+      <input type="text" id="smtpFrom" placeholder="noreply@example.com" />
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Stripe <span class="badge optional">optional</span></h2>
+    <div class="field">
+      <label for="stripeSecret">Secret Key</label>
+      <input type="text" id="stripeSecret" placeholder="sk_live_..." />
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="stripeWebhook">Webhook Secret</label>
+        <input type="text" id="stripeWebhook" placeholder="whsec_..." />
+      </div>
+      <div class="field">
+        <label for="stripePrice">Price ID</label>
+        <input type="text" id="stripePrice" placeholder="price_..." />
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="generateBtn">Generate Environment Variables</button>
+
+  <div class="output-wrap" id="outputWrap">
+    <hr class="divider" />
+    <div class="output-header">
+      <h2>Your Environment Variables</h2>
+      <button class="btn-copy" id="copyBtn">Copy to clipboard</button>
+    </div>
+    <pre id="outputPre"></pre>
+
+    <div class="steps">
+      <h2>Next Steps</h2>
+      <ol>
+        <li>Open your <strong>Dokploy dashboard</strong>.</li>
+        <li>Create a new app &rarr; Docker Compose deployment.</li>
+        <li>Set the <strong>repository</strong> to <code>https://github.com/msrbuilds/roost</code>.</li>
+        <li>Set <strong>compose path</strong> to <code>docker-compose.dokploy.yml</code>.</li>
+        <li>Paste the env vars above into the app's <strong>Environment</strong> section.</li>
+        <li>Under <strong>Domains</strong>, bind your domain to the <code>nginx</code> service on port <code>80</code>.</li>
+        <li>Hit <strong>Deploy</strong>.</li>
+        <li>After first signup, run <code>SELECT setup_first_admin('your@email.com')</code> in the Postgres DB to promote yourself to admin.</li>
+      </ol>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://github.com/msrbuilds/roost" target="_blank">Roost</a> — Self-hosted community platform
+  </footer>
+</div>
+
+<script>
+// --- Crypto utilities (all client-side) ---
+
+function randomBytes(n) {
+  const buf = new Uint8Array(n);
+  crypto.getRandomValues(buf);
+  return buf;
+}
+
+function randomBase64(n) {
+  return btoa(String.fromCharCode(...randomBytes(n)))
+    .replace(/\+/g, '').replace(/\//g, '').replace(/=/g, '').slice(0, n);
+}
+
+function randomAlphanumeric(n) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const buf = randomBytes(n);
+  return Array.from(buf, b => chars[b % chars.length]).join('');
+}
+
+// --- HMAC-SHA256 JWT (pure JS, no dependencies) ---
+
+async function hmacSha256(key, message) {
+  const enc = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', enc.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(message));
+  return sig;
+}
+
+function base64url(buf) {
+  let str;
+  if (buf instanceof ArrayBuffer) {
+    str = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  } else {
+    str = btoa(buf);
+  }
+  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function generateJWT(role, secret) {
+  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + (10 * 365 * 24 * 60 * 60); // 10 years
+  const payload = base64url(JSON.stringify({
+    role: role,
+    iss: 'supabase',
+    iat: now,
+    exp: exp
+  }));
+  const data = header + '.' + payload;
+  const sig = await hmacSha256(secret, data);
+  return data + '.' + base64url(sig);
+}
+
+// --- Generate ---
+
+async function generate() {
+  const domain = document.getElementById('domain').value.trim();
+  if (!domain || domain === 'localhost') {
+    alert('Enter a real domain (not localhost).');
+    return;
+  }
+
+  const appName = document.getElementById('appName').value.trim() || 'Roost';
+  const smtpHost = document.getElementById('smtpHost').value.trim();
+  const smtpPort = document.getElementById('smtpPort').value.trim() || '587';
+  const smtpUser = document.getElementById('smtpUser').value.trim();
+  const smtpPass = document.getElementById('smtpPass').value.trim();
+  const smtpFrom = document.getElementById('smtpFrom').value.trim() || `noreply@${domain}`;
+  const stripeSecret = document.getElementById('stripeSecret').value.trim();
+  const stripeWebhook = document.getElementById('stripeWebhook').value.trim();
+  const stripePrice = document.getElementById('stripePrice').value.trim();
+  const stripeEnabled = stripeSecret ? 'true' : 'false';
+
+  // Generate secrets
+  const postgresPassword = randomAlphanumeric(32);
+  const jwtSecret = randomAlphanumeric(64);
+  const secretKeyBase = randomAlphanumeric(64);
+  const minioPassword = randomAlphanumeric(32);
+
+  // Generate Supabase keys
+  const anonKey = await generateJWT('anon', jwtSecret);
+  const serviceRoleKey = await generateJWT('service_role', jwtSecret);
+
+  const autoConfirm = smtpHost ? 'false' : 'true';
+
+  const env = `# ============================================================
+# Roost - Dokploy Environment
+# Generated at ${new Date().toISOString()}
+# ============================================================
+
+# Core
+ROOST_DOMAIN=${domain}
+APP_NAME=${appName}
+
+# Database
+POSTGRES_PASSWORD=${postgresPassword}
+
+# JWT (shared between all Supabase services)
+JWT_SECRET=${jwtSecret}
+SECRET_KEY_BASE=${secretKeyBase}
+
+# Supabase API Keys (signed with JWT_SECRET above)
+ANON_KEY=${anonKey}
+SERVICE_ROLE_KEY=${serviceRoleKey}
+
+# Auth
+GOTRUE_AUTOCONFIRM=${autoConfirm}
+
+# MinIO Storage (included by default)
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=${minioPassword}
+MINIO_BUCKET=roost-uploads
+
+# Email (SMTP)
+SMTP_HOST=${smtpHost}
+SMTP_PORT=${smtpPort}
+SMTP_USER=${smtpUser}
+SMTP_PASS=${smtpPass}
+SMTP_FROM_EMAIL=${smtpFrom}
+
+# Stripe
+STRIPE_ENABLED=${stripeEnabled}
+STRIPE_SECRET_KEY=${stripeSecret}
+STRIPE_WEBHOOK_SECRET=${stripeWebhook}
+STRIPE_PRICE_ID=${stripePrice}`;
+
+  document.getElementById('outputPre').textContent = env;
+  document.getElementById('outputWrap').classList.add('visible');
+  document.getElementById('outputWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// --- Copy ---
+
+function copyOutput() {
+  const text = document.getElementById('outputPre').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy to clipboard'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+document.getElementById('generateBtn').addEventListener('click', generate);
+document.getElementById('copyBtn').addEventListener('click', copyOutput);
+</script>
+</body>
+</html>
