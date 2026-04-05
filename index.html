@@ -124,6 +124,40 @@
     </div>
   </div>
 
+  <div class="card" id="storageCard">
+    <div class="toggle-header">
+      <h2>Storage <span class="badge optional">optional</span></h2>
+      <label class="toggle">
+        <input type="checkbox" id="storageToggle" />
+        <span class="slider"></span>
+      </label>
+    </div>
+    <p class="toggle-hint visible" id="storageOff">Using MinIO (self-hosted S3) — included automatically, no config needed.</p>
+    <div class="card-body collapsed" id="storageBody">
+      <p class="hint" style="margin-bottom: 1rem;">Switch to AWS S3. MinIO will still run idle but won't be used.</p>
+      <div class="row">
+        <div class="field">
+          <label for="awsAccessKey">AWS Access Key ID</label>
+          <input type="text" id="awsAccessKey" placeholder="AKIA..." />
+        </div>
+        <div class="field">
+          <label for="awsSecretKey">AWS Secret Access Key</label>
+          <input type="text" id="awsSecretKey" placeholder="your-secret" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="awsBucket">S3 Bucket Name</label>
+          <input type="text" id="awsBucket" placeholder="roost-uploads" />
+        </div>
+        <div class="field">
+          <label for="awsRegion">AWS Region</label>
+          <input type="text" id="awsRegion" placeholder="us-east-1" value="us-east-1" />
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card" id="stripeCard">
     <div class="toggle-header">
       <h2>Stripe <span class="badge optional">optional</span></h2>
@@ -204,6 +238,7 @@ function setupToggle(toggleId, bodyId, hintId) {
 }
 
 setupToggle('smtpToggle', 'smtpBody', 'smtpOff');
+setupToggle('storageToggle', 'storageBody', 'storageOff');
 setupToggle('stripeToggle', 'stripeBody', 'stripeOff');
 
 // --- Crypto utilities (all client-side) ---
@@ -267,6 +302,7 @@ async function generate() {
 
   const appName = document.getElementById('appName').value.trim() || 'Roost';
   const smtpEnabled = document.getElementById('smtpToggle').checked;
+  const useAwsS3 = document.getElementById('storageToggle').checked;
   const stripeEnabled = document.getElementById('stripeToggle').checked;
 
   // Generate secrets
@@ -300,12 +336,31 @@ ANON_KEY=${anonKey}
 SERVICE_ROLE_KEY=${serviceRoleKey}
 
 # Auth
-GOTRUE_AUTOCONFIRM=${smtpEnabled ? 'false' : 'true'}
+GOTRUE_AUTOCONFIRM=${smtpEnabled ? 'false' : 'true'}`;
+
+  if (useAwsS3) {
+    const awsAccessKey = document.getElementById('awsAccessKey').value.trim();
+    const awsSecretKey = document.getElementById('awsSecretKey').value.trim();
+    const awsBucket = document.getElementById('awsBucket').value.trim() || 'roost-uploads';
+    const awsRegion = document.getElementById('awsRegion').value.trim() || 'us-east-1';
+    env += `
+
+# AWS S3 Storage
+AWS_ACCESS_KEY_ID=${awsAccessKey}
+AWS_SECRET_ACCESS_KEY=${awsSecretKey}
+AWS_S3_BUCKET=${awsBucket}
+AWS_REGION=${awsRegion}
+S3_ENDPOINT=https://s3.${awsRegion}.amazonaws.com
+S3_FORCE_PATH_STYLE=false
+VITE_S3_ENDPOINT=https://${awsBucket}.s3.${awsRegion}.amazonaws.com`;
+  } else {
+    env += `
 
 # MinIO Storage (included by default)
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=${minioPassword}
 MINIO_BUCKET=roost-uploads`;
+  }
 
   if (smtpEnabled) {
     const smtpHost = document.getElementById('smtpHost').value.trim();
